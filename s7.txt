@@ -1,0 +1,71 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%% Generating all expressions %%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% with a given value %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% arit(+ListOfNumbers, +N, -ExpressionRepresentedByTheList)
+% obtains a list of integers N0,…,Nk with an integer N and
+% discovers whether there is a list of operators op1,..,opk from the set {+,-,*} 
+% such that the expression N0 op1 N1 op2 .. opk Nk
+% (inserting brackets when necessary) evaluates to N
+
+?- arit([1,2,3],6, V).
+V = 1 + 2 + 3 ; 
+V = 1 * 2 * 3 ;
+V = 1 + (2 + 3) ;
+V = 1 *( 2 * 3) ;
+false.
+
+?- arit([1,1,1],100, V).
+false.
+
+arit([N],N,N).
+arit(L,N,Exp) :- append(S1,S2,L), S1\=[], S2\=[],
+                 arit(S1,N1,V1),arit(S2,N2,V2),
+                 member(Op,[+,-,*]), Value =.. [Op,N1,N2],
+                 N is Value, Exp =.. [Op,V1,V2].
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%% Substitution of an expression %%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% subst(Subterm, Term, Subterm1, Term1)
+?- subst(sin(x), 2*sin(x)*f(sin(x)), t, F).
+   F = 2*t*f(t)
+
+subst(Term,Term,Term1,Term1) :- !.
+subst(_,Term,_,Term) :- atomic(Term), !.
+subst(Subterm, Term,Subterm1,Term1) :- Term =.. [F|Arg], 
+				       s(Subterm,Arg,Subterm1,Arg1),
+				       Term1 =.. [F|Arg1].
+s(_,[],_,[]).
+s(P,[Term|Termy],P1,[Term1|Termy1]) :- subst(P,Term,P1,Term1),
+				       s(P,Termy,P1,Termy1).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% State space search %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Water Jug Problem
+% 2 empty jugs with capacities 4l and 3l
+% the goal is to measure exactly 2l in one jug
+% we can pour the water form one jug to the other
+% inexhaustible source and inexhaustible sink
+
+
+pour(s(X,Y),s(0,Y)):- X>0.
+pour(s(X,Y),s(X,0)):- Y>0.
+pour(s(X,Y),s(4,Y)):- X<4.
+pour(s(X,Y),s(X,3)):- Y<3.
+pour(s(X,Y),s(4,Z)):- X<4, Z is Y-(4-X), Z>0.
+pour(s(X,Y),s(Z,3)):- Y<3, Z is X-(3-Y), Z>0.
+pour(s(X,Y),s(Z,0)):- Y>0, Z is X+Y, Z < 4.
+pour(s(X,Y),s(0,Z)):- X>0, Z is X+Y, Z < 3.
+
+
+wjp(Reseni):-wjp(s(0,0),[s(0,0)],States),reverse(States,Reseni).
+
+wjp(s(X,Y),States,States):- X=2; Y=2.
+wjp(State,Visited,S):- pour(State,NewState), \+member(NewState,Visited),
+                       wjp(NewState,[NewState|Visited],S).
+
